@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:macros_amounts/bloc/calculator_bloc.dart';
 import 'package:macros_amounts/components/app_bar.dart';
+import 'package:macros_amounts/components/loader.dart';
 import 'package:macros_amounts/constants/spacings.dart';
-import 'package:macros_amounts/models/macros_model.dart';
 import 'package:macros_amounts/pages/calculator_page.dart';
 import 'package:macros_amounts/pages/modal/macros_modal.dart';
-import 'package:macros_amounts/service/calculator_service.dart';
 
 class CalculatorScreen extends StatefulWidget {
   const CalculatorScreen({super.key});
@@ -29,28 +30,54 @@ class _CalculatorScreenState extends State<CalculatorScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(Spacing.s16),
-          child: CalculatorPage(
-            onGenderSelected: (value) => gender = value,
-            ageController: ageController,
-            heightController: heightController,
-            weightController: weightController,
-            onActivityLevelSelected: (value) => activityLevel = value,
-            onGoalSelected: (value) => goal = value,
-            onCalculatePressed: () async {
-              MacrosModel? macrosModel = await getMacros(
-                gender: gender,
-                age: int.parse(ageController.text),
-                height: int.parse(heightController.text),
-                weight: int.parse(weightController.text),
-                activityLevel: activityLevel,
-                goal: goal,
-              );
+          child: BlocProvider(
+            create: (context) => CalculatorBloc(),
+            child: BlocConsumer<CalculatorBloc, CalculatorState>(
+              builder: (context, state) {
+                if (state is CalculatorLoading) {
+                  return const CustomLoader();
+                }
 
-              showMacrosDialog(
-                context,
-                data: macrosModel,
-              );
-            },
+                return CalculatorPage(
+                  onGenderSelected: (value) => gender = value,
+                  ageController: ageController,
+                  heightController: heightController,
+                  weightController: weightController,
+                  onActivityLevelSelected: (value) => activityLevel = value,
+                  onGoalSelected: (value) => goal = value,
+                  onCalculatePressed: () async {
+                    context.read<CalculatorBloc>().add(GetMacrosEvent(
+                          gender: gender,
+                          age: int.parse(ageController.text.isEmpty
+                              ? "-1"
+                              : ageController.text),
+                          height: int.parse(heightController.text.isEmpty
+                              ? "-1"
+                              : heightController.text),
+                          weight: int.parse(weightController.text.isEmpty
+                              ? "-1"
+                              : weightController.text),
+                          activityLevel: activityLevel,
+                          goal: goal,
+                        ));
+                  },
+                );
+              },
+              listener: (context, state) {
+                if (state is CalculatorSuccess) {
+                  showMacrosDialog(
+                    context,
+                    data: state.data,
+                  );
+                }
+                if (state is CalculatorError) {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(state.error!),
+                    duration: const Duration(seconds: 5),
+                  ));
+                }
+              },
+            ),
           ),
         ),
       ),

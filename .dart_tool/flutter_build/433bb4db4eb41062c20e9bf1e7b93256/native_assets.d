@@ -1,1 +1,0 @@
- /Users/paulosabra/Projects/macros-amounts/.dart_tool/flutter_build/433bb4db4eb41062c20e9bf1e7b93256/native_assets.yaml: 
